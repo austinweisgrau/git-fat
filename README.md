@@ -55,6 +55,15 @@ To use an Amazon S3 bucket as the backend, you should first install the AWS CLI 
 
     [s3]
     bucket = s3://your-s3-bucket
+	
+Optionally you can use a subfolder within the S3 bucket, which would
+look like this:
+
+    [s3]
+    bucket = s3://your-s3-bucket
+	folder = your-subfolder
+	
+Which would resolve to the S3 folder `s3://your-s3-bucket/your-subfolder/`
 
 # A worked example
 

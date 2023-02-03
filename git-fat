@@ -203,11 +203,13 @@ class GitFat(object):
         # Cheat here
         return path
 
-    def get_all_remote_files(self, bucket: str):
+    def get_all_remote_files(self, bucket: str, folder: str = ""):
         if bucket.startswith("s3://"):
             bucket = bucket.replace("s3://", "")
 
         cmd = ["aws", "s3api", "list-objects-v2", "--bucket", bucket]
+        if folder:
+            cmd.extend(["--prefix", folder + "/"])
         output = []
         try:
             initial_output = subprocess.check_output(cmd)
@@ -242,29 +244,27 @@ class GitFat(object):
 
         return output
 
-    def get_aws_cmd(self, push, s3_bucket, files):
-        if not which('aws'):
-            sys.stderr.write('Could not find aws cli install.\n')
+    def get_aws_cmd(self, push, s3_bucket, files, folder=""):
+        if not which("aws"):
+            sys.stderr.write("Could not find aws cli install.\n")
             sys.exit(1)
 
-        if not s3_bucket.startswith('s3://'):
+        if not s3_bucket.startswith("s3://"):
             s3_bucket = "s3://{}".format(s3_bucket)
         cmds = []
-        remote_files = self.get_all_remote_files(s3_bucket)
+        remote_files = self.get_all_remote_files(s3_bucket, folder=folder)
+
+        if folder and (not folder.endswith("/")):
+            folder = folder + "/"
+
         # self.verbose(remote_files)
         if push:
             self.verbose('Pushing to %s' % (s3_bucket))
             for file in files:
                 self.verbose('Processing {}'.format(file))
                 local_path = os.path.join(self.objdir, file)
-                bucket_path = s3_bucket + "/" + file
-                cmd = [
-                    "aws",
-                    "s3",
-                    "cp",
-                    local_path,
-                    bucket_path
-                ]
+                bucket_path = s3_bucket + "/" + folder + file
+                cmd = ["aws", "s3", "cp", local_path, bucket_path]
 
                 remote_item = self.get_remote_item(file, remote_files)
                 if remote_item == {}:
@@ -280,14 +280,8 @@ class GitFat(object):
             for file in files:
                 self.verbose('Processing {}'.format(file))
                 local_path = os.path.join(self.objdir, file)
-                bucket_path = s3_bucket + "/" + file
-                cmd = [
-                    "aws",
-                    "s3",
-                    "cp",
-                    bucket_path,
-                    local_path
-                ]
+                bucket_path = s3_bucket + "/" + folder + file
+                cmd = ["aws", "s3", "cp", bucket_path, local_path]
                 if not os.path.exists(local_path):
                     cmds.append(cmd)
                     continue
